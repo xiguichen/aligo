@@ -1,11 +1,13 @@
 """..."""
 from typing import List
+import logging
 
 from aligo.core import *
 from aligo.request import *
 from aligo.types import *
 from aligo.types.Enum import *
 
+logger = logging.getLogger(__name__)
 
 class Update(Core):
     """..."""
@@ -62,7 +64,7 @@ class Update(Core):
 
         ids_len = len(file_id_list)
         if ids_len != len(new_name_list):
-            self._auth.log.warning(f'长度不一致 file_id_list{ids_len}, new_name_list {len(new_name_list)}')
+            logger.warning(f'长度不一致 file_id_list{ids_len}, new_name_list {len(new_name_list)}')
             return []
 
         result = []

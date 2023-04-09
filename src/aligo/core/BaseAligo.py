@@ -16,6 +16,8 @@ from aligo.types import *
 from aligo.types.DataClass import DataType
 from aligo.types.Enum import *
 
+logger = logging.getLogger(__name__)
+
 
 class BaseAligo:
     """..."""
@@ -77,9 +79,9 @@ class BaseAligo:
             try:
                 subprocess.run(['aria2c', '-h'], capture_output=True)
                 self._has_aria2c = True
-                self._auth.log.info('发现 aria2c, 将使用 aria2c 下载文件')
+                logger.info('发现 aria2c, 将使用 aria2c 下载文件')
             except FileNotFoundError:
-                self._auth.log.warning('未发现 aria2c')
+                logger.warning('未发现 aria2c')
                 self._has_aria2c = False
         else:
             self._has_aria2c = False
@@ -157,9 +159,9 @@ class BaseAligo:
                 return DataClass.fill_attrs(cls, d)
             except TypeError:
                 self._auth.debug_log(response)
-                self._auth.log.error(cls)
+                logger.error(cls)
                 traceback.print_exc()
-        self._auth.log.warning(f'{response.status_code} {response.text[:200]}')
+        logger.warning(f'{response.status_code} {response.text[:200]}')
         return Null(response)
 
     def _list_file(
@@ -259,10 +261,10 @@ class BaseAligo:
                         # status 409
                         i.body = DataClass.fill_attrs(body_type, i.body)
                     except TypeError:
-                        # self._auth.log.warning(i)
+                        # logger.warning(i)
                         pass
                 yield i
 
     def logout(self):
         """退出登录"""
-        self._auth.logout()
+        loggerout()

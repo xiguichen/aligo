@@ -13,7 +13,6 @@ from http.server import HTTPServer
 from pathlib import Path
 from typing import Callable, overload, List, Dict, Tuple
 
-import coloredlogs
 import qrcode
 import qrcode_terminal
 import requests
@@ -27,6 +26,7 @@ from .LoginServer import LoginServer
 
 aligo_config_folder = Path.home().joinpath('.aligo')
 aligo_config_folder.mkdir(parents=True, exist_ok=True)
+logger = logging.getLogger(__name__)
 
 
 def get_configurations() -> List[str]:
@@ -65,9 +65,9 @@ class Auth:
     def debug_log(self, response: requests.Response):
         """打印错误日志, 便于分析调试"""
         r = response.request
-        self.log.warning(f'[method status_code] {r.method} {response.status_code}')
-        self.log.warning(f'[url] {response.url}')
-        self.log.warning(f'[response body] {response.text[:200]}')
+        logger.warning(f'[method status_code] {r.method} {response.status_code}')
+        logger.warning(f'[url] {response.url}')
+        logger.warning(f'[response body] {response.text[:200]}')
 
     def error_log_exit(self, response: requests.Response):
         """打印错误日志并退出"""
@@ -138,24 +138,13 @@ class Auth:
         self._port = port
         self._webServer: HTTPServer = None  # type: ignore
         self._email = email
-        self.log = logging.getLogger(f'{__name__}:{name}')
         self._request_failed_delay = request_failed_delay
         self._requests_timeout = requests_timeout
         self._login_timeout = LoginTimeout(login_timeout)
         self._re_login = re_login
 
-        fmt = f'%(asctime)s.%(msecs)03d {name}.%(levelname)s %(message)s'
-
-        coloredlogs.install(
-            level=level,
-            logger=self.log,
-            milliseconds=True,
-            datefmt='%X',
-            fmt=fmt
-        )
-
-        self.log.info(f'Config {self._name}')
-        self.log.info(f'日志等级 {logging.getLevelName(level)}')
+        logger.info(f'Config {self._name}')
+        logger.info(f'日志等级 {logging.getLevelName(level)}')
 
         #
         self.session = requests.session()
@@ -173,24 +162,24 @@ class Auth:
         else:
             self._os_name = '类 Unix 操作系统'
             show = show or self._show_console
-        self.log.info(self._os_name)
+        logger.info(self._os_name)
         self._show = show
 
         self._x_device_id = None
 
         if self._name.exists():
-            self.log.info(f'加载配置文件 {self._name}')
+            logger.info(f'加载配置文件 {self._name}')
             self.token = DataClass.fill_attrs(Token, json.load(self._name.open(encoding='utf8')))
             self.session.headers.update({
                 'Authorization': self.token.access_token,
             })
             self._init_x_headers()
         elif refresh_token is None:
-            self.log.info('登录方式 扫描二维码')
+            logger.info('登录方式 扫描二维码')
             self._login()
 
         if refresh_token:
-            self.log.debug('登录方式 refresh_token')
+            logger.debug('登录方式 refresh_token')
             self._refresh_token(refresh_token)
 
     def _create_session(self):
@@ -217,23 +206,23 @@ class Auth:
         })
         # 将 x-headers 放到 token 对象中，用以保存
         if not self.token.x_device_id:
-            self.log.info('初始化 x_device_id')
+            logger.info('初始化 x_device_id')
             self.token.x_device_id = self._x_device_id
             self._save()
 
     def _save(self):
         """保存配置文件"""
-        self.log.info(f'保存配置文件 {self._name}')
+        logger.info(f'保存配置文件 {self._name}')
         json.dump(asdict(self.token), self._name.open('w', encoding='utf8'))
 
     # noinspection PyPep8Naming
     def _login(self):
         """登录"""
-        self.log.info('开始登录')
+        logger.info('开始登录')
         response = self._login_by_qrcode()
 
         if response.status_code != 200:
-            self.log.error('登录失败')
+            logger.error('登录失败')
             self.error_log_exit(response)
 
         bizExt = response.json()['content']['data']['bizExt']
@@ -256,7 +245,7 @@ class Auth:
 
         #
         session_id = self.session.cookies.get('SESSIONID')
-        self.log.debug(f'SESSIONID {session_id}')
+        logger.debug(f'SESSIONID {session_id}')
 
         response = self.session.get(
             PASSPORT_HOST + NEWLOGIN_QRCODE_GENERATE_DO, params=UNI_PARAMS
@@ -270,15 +259,15 @@ class Auth:
         if self._port or self._email:
             if self._port:
                 # noinspection HttpUrlsUsage
-                self.log.info(f'请访问 http://<YOUR_IP>:{self._port} 扫描二维码')
+                logger.info(f'请访问 http://<YOUR_IP>:{self._port} 扫描二维码')
                 _thread.start_new_thread(self._show_qrcode_in_web, (qr_link,))
             if self._email:
                 self._send_email(qr_link)
         else:
             qrcode_png = self._show(qr_link)
             if qrcode_png:
-                self.log.info(f'二维码图片文件 {qrcode_png}')
-        self.log.info('等待扫描二维码')
+                logger.info(f'二维码图片文件 {qrcode_png}')
+        logger.info('等待扫描二维码')
 
         while True:
             response = self.session.post(
@@ -292,9 +281,9 @@ class Auth:
             if qrCodeStatus == 'NEW':
                 pass
             elif qrCodeStatus == 'SCANED':
-                self.log.info('已扫描 等待确认')
+                logger.info('已扫描 等待确认')
             elif qrCodeStatus == 'CONFIRMED':
-                self.log.info(f'已确认 可关闭二维码窗口')
+                logger.info(f'已确认 可关闭二维码窗口')
                 if self._port:
                     try:
                         self.session.get(f'http://localhost:{self._port}/close')
@@ -302,7 +291,7 @@ class Auth:
                         pass
                 return response
             else:
-                self.log.warning('未知错误 可能二维码已经过期')
+                logger.warning('未知错误 可能二维码已经过期')
                 self.error_log_exit(response)
             time.sleep(3)
             self._login_timeout.check_timeout()
@@ -311,7 +300,7 @@ class Auth:
         """刷新 token"""
         if refresh_token is None:
             refresh_token = self.token.refresh_token
-        self.log.info('刷新 token')
+        logger.info('刷新 token')
         response = self.session.post(
             API_HOST + V2_ACCOUNT_TOKEN,
             json={
@@ -321,7 +310,7 @@ class Auth:
         )
         self._log_response(response)
         if response.status_code == 200:
-            self.log.info('刷新 token 成功')
+            logger.info('刷新 token 成功')
             self.token = DataClass.fill_attrs(Token, response.json())
             self.session.headers.update({
                 'Authorization': self.token.access_token,
@@ -332,7 +321,7 @@ class Auth:
                 self.token.x_device_id = self._x_device_id
                 self._save()
         else:
-            self.log.warning('刷新 token 失败')
+            logger.warning('刷新 token 失败')
             if loop_call:
                 # 从 _login 调用，则不继续调用 _login，防止循环调用
                 # 走到这里 说明 登录失败，则 退出
@@ -362,7 +351,7 @@ class Auth:
                     headers=headers, verify=self._VERIFY_SSL, json=body, timeout=self._requests_timeout
                 )
             except requests.exceptions.ConnectionError as e:
-                self.log.warning(e)
+                logger.warning(e)
                 time.sleep(self._request_failed_delay)
                 continue
 
@@ -401,7 +390,7 @@ class Auth:
                     err_msg = '内部网关错误'
                 elif status_code == 504:
                     err_msg = '内部网关超时'
-                self.log.warning(f'{err_msg}，暂停 {sleep_int} 秒钟')
+                logger.warning(f'{err_msg}，暂停 {sleep_int} 秒钟')
                 time.sleep(sleep_int)
                 continue
 
@@ -413,11 +402,11 @@ class Auth:
                     self._create_session()
                     continue
                 elif b'"InvalidResource.FileTypeFolder"' in response.content:
-                    self.log.warning(
+                    logger.warning(
                         '请区分 文件 和 文件夹，有些操作是它们独有的，比如获取下载链接，很显然 文件夹 是没有的！')
             return response
 
-        self.log.info(f'重试 5 次仍失败，抛出异常')
+        logger.info(f'重试 5 次仍失败，抛出异常')
         self.error_log_exit(response)
 
     def get(self, path: str, host: str = API_HOST, params: dict = None, headers: dict = None) -> requests.Response:
@@ -494,11 +483,11 @@ class Auth:
             self._EMAIL_USER, self._EMAIL_PASSWORD, self._EMAIL_HOST, self._EMAIL_PORT
         )
         os.remove(qr_img_path)
-        self.log.info(f'登录二维码已发送至 {self._email[0]}')
+        logger.info(f'登录二维码已发送至 {self._email[0]}')
 
     def _log_response(self, response: requests.Response):
         """打印响应日志"""
-        self.log.info(
+        logger.info(
             f'{response.request.method} {response.url} {response.status_code} {len(response.content)}'
         )
 

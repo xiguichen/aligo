@@ -1,6 +1,7 @@
 """..."""
 import os
 import re
+import logging
 from typing import Iterator, List
 
 from tqdm import tqdm
@@ -11,6 +12,7 @@ from aligo.request import *
 from aligo.response import *
 from aligo.types import *
 
+logger = logging.getLogger(__name__)
 
 class Download(BaseAligo):
     """..."""
@@ -54,13 +56,13 @@ class Download(BaseAligo):
 
         # url 为空判断
         if not url:
-            self._auth.log.error(f'文件 {file_path} 下载失败: 获取的url为空, 文件可能被屏蔽导致无法下载')
+            logger.error(f'文件 {file_path} 下载失败: 获取的url为空, 文件可能被屏蔽导致无法下载')
             return file_path
 
-        self._auth.log.info(f'开始下载文件 {file_path}')
+        logger.info(f'开始下载文件 {file_path}')
 
         if os.path.exists(file_path) and not os.path.exists(f'{file_path}.aria2'):
-            self._auth.log.warning(f'文件已存在,跳过下载 {file_path}')
+            logger.warning(f'文件已存在,跳过下载 {file_path}')
             return file_path
 
         if self._has_aria2c:
@@ -102,7 +104,7 @@ class Download(BaseAligo):
                             progress_bar.update(len(content))
                             f.write(content)
                 else:
-                    self._auth.log.warning(f'不支持断点续传 {file_path}')
+                    logger.warning(f'不支持断点续传 {file_path}')
                     progress_bar = tqdm(total=total_size, unit='B', unit_scale=True, colour='#31a8ff')
                     with open(tmp_file, 'wb') as f:
                         for content in resp.iter_content(chunk_size=Download._DOWNLOAD_CHUNK_SIZE):
@@ -113,7 +115,7 @@ class Download(BaseAligo):
             if progress_bar:
                 progress_bar.close()
 
-        self._auth.log.info(f'文件下载完成 {file_path}')
+        logger.info(f'文件下载完成 {file_path}')
         return file_path
 
     def download_files(self, files: List[BaseFile], local_folder: str = '.') -> List[str]:

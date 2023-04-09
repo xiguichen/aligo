@@ -1,6 +1,7 @@
 """自定义分享"""
 import base64
 import json
+import logging
 from typing import List, Dict
 
 from aligo.core import *
@@ -8,6 +9,7 @@ from aligo.request import *
 from aligo.types import *
 from aligo.types.Enum import *
 
+logger = logging.getLogger(__name__)
 
 class CustomShare(Core):
     """..."""
@@ -157,7 +159,7 @@ class CustomShare(Core):
         >>> print(result)
         """
         if not data.startswith(self._ALIGO_SHARE_SCHEMA):
-            self._auth.log.warning(f'这不是合法 aligo 分享信息: {data}')
+            logger.warning(f'这不是合法 aligo 分享信息: {data}')
             return
 
         data = data[8:]

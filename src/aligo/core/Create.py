@@ -3,6 +3,7 @@ import base64
 import hashlib
 import math
 import os
+import logging
 from dataclasses import asdict
 from typing import Union, List
 
@@ -16,6 +17,7 @@ from aligo.response import *
 from aligo.types import *
 from aligo.types.Enum import *
 
+logger = logging.getLogger(__name__)
 
 class Create(BaseAligo):
     """创建文件: 1.创建文件 2.上传文件 3.下载文件"""
@@ -178,9 +180,9 @@ class Create(BaseAligo):
             part_info_list=part_info.part_info_list
         ))
         if isinstance(complete, BaseFile):
-            self._auth.log.info(f'文件上传完成 {file_path}')
+            logger.info(f'文件上传完成 {file_path}')
         else:
-            self._auth.log.info(f'文件上传失败 {file_path}')
+            logger.info(f'文件上传失败 {file_path}')
         return complete
 
     def upload_file(
@@ -206,7 +208,7 @@ class Create(BaseAligo):
         >>> up_file = ali.upload_file('/Users/aligo/Desktop/test.txt')
         >>> print(up_file)
         """
-        self._auth.log.info(f'开始上传文件 {file_path}')
+        logger.info(f'开始上传文件 {file_path}')
         file_path = os.path.abspath(file_path)
         if name is None:
             name = os.path.basename(file_path)
@@ -240,7 +242,7 @@ class Create(BaseAligo):
                                                parent_file_id=parent_file_id, drive_id=drive_id,
                                                check_name_mode=check_name_mode)
                 if part_info.rapid_upload:
-                    self._auth.log.info(f'文件秒传成功 {file_path}')
+                    logger.info(f'文件秒传成功 {file_path}')
                     # return self.get_file(GetFileRequest(file_id=part_info.file_id))
                     return part_info
             # 开始上传
@@ -251,7 +253,7 @@ class Create(BaseAligo):
                                            parent_file_id=parent_file_id, drive_id=drive_id,
                                            check_name_mode=check_name_mode)
             if part_info.rapid_upload:
-                self._auth.log.info(f'文件秒传成功 {file_path}')
+                logger.info(f'文件秒传成功 {file_path}')
                 # return self.get_file(GetFileRequest(file_id=part_info.file_id))
                 return part_info
             # 开始上传
@@ -259,7 +261,7 @@ class Create(BaseAligo):
 
         # exists=True
         if part_info.exist:
-            self._auth.log.warning(f'文件已存在, 跳过 {file_path} {part_info.file_id}')
+            logger.warning(f'文件已存在, 跳过 {file_path} {part_info.file_id}')
             # return self.get_file(GetFileRequest(file_id=part_info.file_id))
             return part_info
 
@@ -286,7 +288,7 @@ class Create(BaseAligo):
         :param drive_id: [选填] 网盘id
         :return: [CreateFileResponse]
         """
-        self._auth.log.info(f'开始秒传 {name} {content_hash} {size}')
+        logger.info(f'开始秒传 {name} {content_hash} {size}')
         proof_code = self._get_proof_code(url, size)
         body = CreateFileRequest(
             name=name,
