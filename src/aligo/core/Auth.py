@@ -380,7 +380,7 @@ class Auth:
 
             if status_code in [429, 502, 504]:
                 if self._SLEEP_TIME_SEC is None:
-                    sleep_int = 5 ** (i % 4)
+                    sleep_int = 1 ** (i % 4)
                 else:
                     sleep_int = self._SLEEP_TIME_SEC
                 err_msg = None
